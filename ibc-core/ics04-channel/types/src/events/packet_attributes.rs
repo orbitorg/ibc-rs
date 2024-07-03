@@ -210,6 +210,44 @@ impl From<TimeoutTimestampAttribute> for abci::EventAttribute {
     }
 }
 
+impl TryFrom<abci::EventAttribute> for TimeoutTimestampAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let nanos = value
+                    .parse()
+                    .map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+                let timeout_timestamp = Timestamp::from_nanoseconds(nanos).map_err(|_| {
+                    ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    }
+                })?;
+
+                Ok(TimeoutTimestampAttribute { timeout_timestamp })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
+    }
+}
+
 #[cfg_attr(
     feature = "parity-scale-codec",
     derive(
@@ -231,6 +269,38 @@ pub struct SequenceAttribute {
 impl From<SequenceAttribute> for abci::EventAttribute {
     fn from(attr: SequenceAttribute) -> Self {
         (PKT_SEQ_ATTRIBUTE_KEY, attr.sequence.to_string()).into()
+    }
+}
+
+impl TryFrom<abci::EventAttribute> for SequenceAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_SEQ_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let sequence =
+                    Sequence::from_str(value).map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+
+                Ok(SequenceAttribute { sequence })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
     }
 }
 
@@ -258,6 +328,40 @@ impl From<SrcPortIdAttribute> for abci::EventAttribute {
     }
 }
 
+impl TryFrom<abci::EventAttribute> for SrcPortIdAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_SRC_PORT_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let port_id =
+                    PortId::from_str(value).map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+
+                Ok(SrcPortIdAttribute {
+                    src_port_id: port_id,
+                })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
+    }
+}
+
 #[cfg_attr(
     feature = "parity-scale-codec",
     derive(
@@ -279,6 +383,39 @@ pub struct SrcChannelIdAttribute {
 impl From<SrcChannelIdAttribute> for abci::EventAttribute {
     fn from(attr: SrcChannelIdAttribute) -> Self {
         (PKT_SRC_CHANNEL_ATTRIBUTE_KEY, attr.src_channel_id.as_str()).into()
+    }
+}
+
+impl TryFrom<abci::EventAttribute> for SrcChannelIdAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_SRC_CHANNEL_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let src_channel_id = ChannelId::from_str(value).map_err(|_| {
+                    ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    }
+                })?;
+
+                Ok(SrcChannelIdAttribute { src_channel_id })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
     }
 }
 
@@ -306,6 +443,40 @@ impl From<DstPortIdAttribute> for abci::EventAttribute {
     }
 }
 
+impl TryFrom<abci::EventAttribute> for DstPortIdAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_DST_PORT_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let port_id =
+                    PortId::from_str(value).map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+
+                Ok(DstPortIdAttribute {
+                    dst_port_id: port_id,
+                })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
+    }
+}
+
 #[cfg_attr(
     feature = "parity-scale-codec",
     derive(
@@ -330,6 +501,39 @@ impl From<DstChannelIdAttribute> for abci::EventAttribute {
     }
 }
 
+impl TryFrom<abci::EventAttribute> for DstChannelIdAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_DST_CHANNEL_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let dst_channel_id = ChannelId::from_str(value).map_err(|_| {
+                    ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    }
+                })?;
+
+                Ok(DstChannelIdAttribute { dst_channel_id })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
+    }
+}
+
 #[cfg_attr(
     feature = "parity-scale-codec",
     derive(
@@ -351,6 +555,38 @@ pub struct ChannelOrderingAttribute {
 impl From<ChannelOrderingAttribute> for abci::EventAttribute {
     fn from(attr: ChannelOrderingAttribute) -> Self {
         (PKT_CHANNEL_ORDERING_ATTRIBUTE_KEY, attr.order.as_str()).into()
+    }
+}
+
+impl TryFrom<abci::EventAttribute> for ChannelOrderingAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_CHANNEL_ORDERING_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let order =
+                    Order::from_str(value).map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+
+                Ok(ChannelOrderingAttribute { order })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
     }
 }
 
