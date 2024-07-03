@@ -77,6 +77,10 @@ pub enum ChannelError {
     InvalidAttributeValue { attribute_value: String },
     /// Missing attribute key: `{attribute_key}`
     MissingAttributeKey { attribute_key: String },
+    /// Invalid attribute count: expected `{expected}`, actual `{actual}`
+    InvalidAttributeCount { expected: usize, actual: usize },
+    /// Mismatched packet data
+    MismatchedPacketData,
     /// other error: `{description}`
     Other { description: String },
 }

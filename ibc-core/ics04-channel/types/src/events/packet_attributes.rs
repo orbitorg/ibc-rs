@@ -2,8 +2,10 @@
 //! during packet-related datagrams.
 //!
 use core::str;
+use core::str::FromStr;
 
 use derive_more::From;
+use ibc_core_client_types::Height;
 use ibc_core_host_types::identifiers::{ChannelId, ConnectionId, PortId, Sequence};
 use ibc_primitives::prelude::*;
 use ibc_primitives::Timestamp;
@@ -69,6 +71,55 @@ impl TryFrom<PacketDataAttribute> for Vec<abci::EventAttribute> {
     }
 }
 
+impl TryFrom<Vec<abci::EventAttribute>> for PacketDataAttribute {
+    type Error = ChannelError;
+
+    fn try_from(attrs: Vec<abci::EventAttribute>) -> Result<Self, Self::Error> {
+        if attrs.len() != 2 {
+            return Err(ChannelError::InvalidAttributeCount {
+                expected: 2,
+                actual: attrs.len(),
+            });
+        }
+
+        let packet_data = attrs
+            .iter()
+            .find(|attr| attr.key_bytes() == PKT_DATA_ATTRIBUTE_KEY.as_bytes())
+            .map(|attr| attr.value_bytes().to_vec());
+
+        let packet_data_hex = attrs
+            .iter()
+            .find(|attr| attr.key_bytes() == PKT_DATA_HEX_ATTRIBUTE_KEY.as_bytes())
+            .and_then(|attr| attr.value_str().ok());
+
+        match (packet_data, packet_data_hex) {
+            (Some(data), Some(hex)) => hex::decode(hex)
+                .map_err(|_| ChannelError::InvalidAttributeValue {
+                    attribute_value: String::new(),
+                })
+                .and_then(|decoded_hex| {
+                    if data == decoded_hex {
+                        Ok(PacketDataAttribute { packet_data: data })
+                    } else {
+                        // The data and hex attributes do not match
+                        Err(ChannelError::MismatchedPacketData)
+                    }
+                }),
+            (Some(data), None) => Ok(PacketDataAttribute { packet_data: data }),
+            (None, Some(hex)) => hex::decode(hex)
+                .map_err(|_| ChannelError::InvalidAttributeValue {
+                    attribute_value: String::new(),
+                })
+                .map(|decoded| PacketDataAttribute {
+                    packet_data: decoded,
+                }),
+            (None, None) => Err(ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            }),
+        }
+    }
+}
+
 #[cfg_attr(
     feature = "parity-scale-codec",
     derive(
@@ -95,6 +146,39 @@ impl From<TimeoutHeightAttribute> for abci::EventAttribute {
                 (PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY, height.to_string()).into()
             }
         }
+    }
+}
+
+impl TryFrom<abci::EventAttribute> for TimeoutHeightAttribute {
+    type Error = ChannelError;
+
+    fn try_from(value: abci::EventAttribute) -> Result<Self, Self::Error> {
+        if let Ok(key_str) = value.key_str() {
+            if key_str != PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY {
+                return Err(ChannelError::InvalidAttributeKey {
+                    attribute_key: key_str.to_string(),
+                });
+            }
+        } else {
+            return Err(ChannelError::InvalidAttributeKey {
+                attribute_key: String::new(),
+            });
+        }
+
+        value
+            .value_str()
+            .map(|value| {
+                let height =
+                    Height::from_str(value).map_err(|_| ChannelError::InvalidAttributeValue {
+                        attribute_value: value.to_string(),
+                    })?;
+                let timeout_height = TimeoutHeight::from(height);
+
+                Ok(TimeoutHeightAttribute { timeout_height })
+            })
+            .map_err(|_| ChannelError::InvalidAttributeValue {
+                attribute_value: String::new(),
+            })?
     }
 }
 

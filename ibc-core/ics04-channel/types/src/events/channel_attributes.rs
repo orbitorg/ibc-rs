@@ -5,7 +5,6 @@ use core::str::FromStr;
 use std::string::String;
 
 use derive_more::From;
-use ibc_core_connection_types::error::ConnectionError;
 use ibc_core_host_types::identifiers::{ChannelId, ConnectionId, PortId};
 use tendermint::abci;
 
